@@ -1,8 +1,5 @@
 SRC?=$(shell pwd)
 
-# Resources dir
-RESOURCES_DIR?=algebraic_predictor/resources
-
 PYTHON?=python3.10
 
 help:
@@ -19,7 +16,7 @@ setup-dev-env: setup-quality-env
 	$(PYTHON) -m pip install -r requirements.txt
 
 run-test: setup-dev-env
-	PYTHONPATH=$(SRC):$(SRC)/test:$$PYTHONPATH RESOURCES_DIR=$(RESOURCES_DIR) coverage run -m unittest discover -s test -p 'test_*.py' -v
+	PYTHONPATH=$(SRC):$(SRC)/test:$$PYTHONPATH coverage run -m unittest discover -s test -p 'test_*.py' -v
 	coverage xml
 
 check_dirs := . algebraic_predictor test

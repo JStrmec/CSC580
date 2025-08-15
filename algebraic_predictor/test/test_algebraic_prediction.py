@@ -1,41 +1,49 @@
 import unittest
-import os
-from algebraic_predictor.dataset_augmentor import AlgebraicDatasetGenerator
+from algebraic_predictor.algebraic_predictor import LinearEquationModel
 
 
-class TestAlgebraicPrediction(unittest.TestCase):
+class TestLinearEquationModel(unittest.TestCase):
     def setUp(self):
-        self.resources_dir = os.getenv("RESOURCES_DIR", "algebraic_predictor/resources")
-        os.makedirs(self.input_dir, exist_ok=True)
-        os.makedirs(self.output_dir, exist_ok=True)
-
-    def test_data_augmentation(self):
-        # Create dataset generator
-        generator = AlgebraicDatasetGenerator(
-            num_variables=4, total_examples=1000, train_ratio=0.9
+        self.num_vars = 4
+        self.coefficients = [1.0, 2.0, 3.0, 4.0]
+        self.model = LinearEquationModel(
+            num_vars=self.num_vars,
+            coefficients=self.coefficients,
+            train_set_limit=10,
+            train_set_count=200,
         )
+        self.model.generate_training_data()
+        self.model.train_model()
 
-        # Get train/test splits
-        X_train, y_train, X_test, y_test = generator.get_train_test()
+    def test_initialization(self):
+        self.assertEqual(self.model.num_vars, self.num_vars)
+        self.assertEqual(self.model.coefficients, self.coefficients)
 
-        self.assertEqual(len(X_train), 900)
-        self.assertEqual(len(y_train), 900)
-        self.assertEqual(len(X_test), 100)
-        self.assertEqual(len(y_test), 100)
+    def test_generate_training_data_length(self):
+        self.assertEqual(len(self.model.train_input), 200)
+        self.assertEqual(len(self.model.train_output), 200)
 
-        # Check variable count
-        self.assertEqual(len(X_train[0]), 4)
-        self.assertEqual(len(X_test[0]), 4)
+    def test_training_and_prediction(self):
+        test_input = [1, 2, 3, 4]
+        predicted = self.model.predict(test_input)
+        actual = self.model.actual_value(test_input)
+        self.assertAlmostEqual(predicted, actual, places=5)
 
-        # Check output values
-        for i in range(100):
-            self.assertIsInstance(y_train[i], int)
-            self.assertIsInstance(y_test[i], int)
+    def test_actual_value_computation(self):
+        test_input = [1, 1, 1, 1]
+        expected = sum(self.coefficients)
+        actual = self.model.actual_value(test_input)
+        self.assertEqual(actual, expected)
 
-        file = os.path.join(self.resources_dir, "algebraic_dataset.csv")
-        generator.save_to_file(file)
+    def test_learned_coefficients(self):
+        learned = self.model.get_learned_coefficients()
+        for learned_c, actual_c in zip(learned, self.coefficients):
+            self.assertAlmostEqual(learned_c, actual_c, places=5)
 
-        self.assertTrue(os.path.exists(file), "Dataset file was not created.")
+    def test_invalid_initialization(self):
+        with self.assertRaises(ValueError):
+            LinearEquationModel(num_vars=3, coefficients=[1, 2, 3])
 
-        # Check if the dataset is generated
-        self.assertGreater(len(generator.dataset), 0)
+    def test_invalid_prediction_input_length(self):
+        with self.assertRaises(ValueError):
+            self.model.predict([1, 2])  # too short
